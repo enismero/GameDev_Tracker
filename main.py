@@ -2,9 +2,19 @@ import logging
 import mysql.connector
 from fastapi import FastAPI,HTTPException
 from database import get_connection
+from typing import Literal
+from pydantic import BaseModel, Field
 
 app=FastAPI(title="GameDev Tracker")
 logger=logging.getLogger(__name__)
+
+class TaskCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=150)
+    description: str | None = None
+    priority: Literal["low", "medium", "high"] = "medium"
+    created_by: int = Field(gt=0)
+    assigned_to: int | None = Field(default=None, gt=0)
+
 
 @app.get("/")
 def home():
@@ -48,3 +58,64 @@ def get_tasks():
 
         if connection is not None and connection.is_connected():
             connection.close()
+
+@app.post("/tasks",status_code=201)
+def create_task(task: TaskCreate):
+    title=task.title.strip()
+
+    if not title:
+        raise HTTPException(status_code=422,detail="görev başlığı eklenmeli.")
+    connection =None
+    cursor=None
+
+    try:
+        connection=get_connection()
+        cursor=connection.cursor()
+
+        cursor.execute("""INSERT INTO tasks (
+                title,
+                description,
+                priority,
+                created_by,
+                assigned_to
+            )
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            title,
+            task.description,
+            task.priority,
+            task.created_by,
+            task.assigned_to
+        )
+        )
+
+        task_id=cursor.lastrowid
+        connection.commit()
+
+        return{
+            "message":"görev oluştu",
+            "task_id": task_id
+        }
+    except mysql.connector.Error as e:
+        if connection is not None:
+            connection.rollback()     
+
+        if error.errno == 1452:
+            raise HTTPException(
+                status_code=400,
+                detail="Oluşturan veya sorumlu kullanıcı bulunamadı."
+            ) from error
+        
+        logger.exception("Görev eklenirken veritabanı hatası oluştu.")
+
+        raise HTTPException(
+            status_code=500,
+            detail="görev oluşturulmadı"
+                    ) from error
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+        if connection is not None and connection.is_connected():
+            connection.close()
+        
