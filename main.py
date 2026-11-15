@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 app=FastAPI(title="GameDev Tracker")
 logger=logging.getLogger(__name__)
 
+#yeni oluşturmak için
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=150)
     description: str | None = None
@@ -15,12 +16,15 @@ class TaskCreate(BaseModel):
     created_by: int = Field(gt=0)
     assigned_to: int | None = Field(default=None, gt=0)
 
+#task aşaçasını güncellemek için
+class TaskStatusUpdate(BaseModel):
+    status:Literal["todo","in_progress","testing","done"]
 
 @app.get("/")
 def home():
     return{"message":"GameDev TRacker api çalışıyo."}
-
-@app.get("/tasks") #/tasks adresine gelen GET isteğini karşılar.
+#/tasks adresine gelen GET isteğini karşılar. --------------------
+@app.get("/tasks") 
 def get_tasks():
     connection=None
     cursor=None
@@ -58,8 +62,8 @@ def get_tasks():
 
         if connection is not None and connection.is_connected():
             connection.close()
-
-@app.post("/tasks",status_code=201)
+#görev ekle --------------------------------------------------------
+@app.post("/tasks",status_code=201) 
 def create_task(task: TaskCreate):
     title=task.title.strip()
 
@@ -100,22 +104,63 @@ def create_task(task: TaskCreate):
         if connection is not None:
             connection.rollback()     
 
-        if error.errno == 1452:
+        if e.errno == 1452:
             raise HTTPException(
                 status_code=400,
                 detail="Oluşturan veya sorumlu kullanıcı bulunamadı."
-            ) from error
+            ) from e
         
         logger.exception("Görev eklenirken veritabanı hatası oluştu.")
 
         raise HTTPException(
             status_code=500,
             detail="görev oluşturulmadı"
-                    ) from error
+                    ) from e
     finally:
         if cursor is not None:
             cursor.close()
 
         if connection is not None and connection.is_connected():
             connection.close()
+#task aşamasını güncelleme --------------------------------------
+@app.patch("/tasks/{task_id}/status")
+def update_task_status(task_id:int,task:TaskStatusUpdate):
+    connection=None
+    cursor=None
+    try:
+        connection=get_connection()
+        cursor=connection.cursor(dictionary=True)
+        #görevi bulişlem bitene kadar kilitle
+        cursor.execute(
+            "select task_id from tasks where task_id = %s for update",(task_id,)
+        )
+        existing_task=cursor.fetchone()
+
+        if existing_task is None:
+            raise HTTPException(status_code=404,detail="görev bulunamadı.")
+
+        cursor.execute("""update tasks 
+            set status =%s
+            where task_id = %s"""
+            ,(task.status,task_id))
         
+        connection.commit()
+
+        return{
+            "message":"görev durumu güncellendi.",
+            "task_id":task_id,
+            "status":task.status
+        }
+    except mysql.connector.Error as e:
+        if connection is not None:
+            connection.rollback()
+        logger.exception("görev durumu güncellenirken hata oluştu.")
+
+        raise HTTPException(status_code=500,
+            detail="görev durumu güncellenemedi.")from e
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if connection is not None and connection.is_connected():
+            connection.close()
+            
