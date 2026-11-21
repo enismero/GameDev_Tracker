@@ -1,6 +1,6 @@
 import logging
 import mysql.connector
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI,HTTPException,Request,Response
 from database import get_connection
 from typing import Literal
 from pydantic import BaseModel, Field, SecretStr
@@ -9,7 +9,9 @@ from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from auth import hash_password
+from auth import hash_password,verify_password,hash_token
+import secrets
+
 
 app=FastAPI(title="GameDev Tracker")
 
@@ -51,6 +53,10 @@ class UserCreate(BaseModel):
         min_length=8,
         max_length=128
     )
+
+class UserLogin(BaseModel):
+    user_id:int=Field(gt=0)
+    password: SecretStr=Field(min_length=3,max_length=128)
 
 @app.get("/")
 def home():
@@ -268,3 +274,116 @@ def register_user(user:UserCreate):
 
         if connection is not None and connection.is_connected():
             connection.close()
+
+#login ------------------------
+@app.post("/auth/login")
+def login_user(
+    data:UserLogin,
+    request: Request,
+    response: Response
+):
+    connection = None
+    cursor = None
+
+    try:
+        connection = get_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        #kullanıcı idsi ile 
+        cursor.execute("""
+            SELECT user_id, username, display_name, password_hash
+            FROM users
+            WHERE user_id = %s
+        """, (data.user_id,))
+
+        user = cursor.fetchone()
+
+        if user is None:
+            raise HTTPException(
+                status_code=401,
+                detail="ID veya şifre hatalı."
+            )
+        
+        #şifreyi hash ile karşılaştır
+        password_correct=verify_password(
+            data.password.get_secret_value(),
+            user["password_hash"]
+        )
+
+        if not password_correct:
+            raise HTTPException(
+                status_code=401,
+                detail="ID veya şifre hatalı."
+            )
+
+        #tarayıcıdaki önceki oturumu kaldır
+        old_token=request.cookies.get("tracker_session")
+
+        if old_token:
+            cursor.execute("""
+                DELETE FROM user_sessions
+                WHERE token_hash = %s
+            """, (hash_token(old_token),))
+
+        #düresi dolmuş oturumu temizle
+        cursor.execute("""
+            DELETE FROM user_sessions
+            WHERE expires_at <= UTC_TIMESTAMP()
+        """)
+
+        #yeni oturum anahtarı oluştur
+        token=secrets.token_urlsafe(32)
+
+        cursor.execute("""
+            INSERT INTO user_sessions (
+                token_hash,
+                user_id,
+                expires_at
+            )
+            VALUES (
+                %s,
+                %s,
+                DATE_ADD(UTC_TIMESTAMP(), INTERVAL 1 DAY)
+            )
+        """, (
+            hash_token(token),
+            user["user_id"]
+        ))
+
+        connection.commit()
+
+        #oturum anahtarını tarayıcıya çerez olarak gönder
+        response.set_cookie(
+            key="tracker_session",
+            value=token,
+            httponly=True,
+            samesite="strict",
+            secure=False,
+            max_age=86400,
+            path="/"
+        )
+        response.headers["Cache-Control"] = "no-store"
+
+        return {
+            "message": "Giriş başarılı.",
+            "user_id": user["user_id"],
+            "display_name": user["display_name"]
+        }
+
+    except mysql.connector.Error as error:
+            if connection is not None:
+                connection.rollback()
+
+            logger.exception("Giriş sırasında veritabanı hatası oluştu.")
+
+            raise HTTPException(
+                status_code=500,
+                detail="Giriş işlemi tamamlanamadı."
+            ) from error
+
+    finally:
+            if cursor is not None:
+                cursor.close()
+
+            if connection is not None and connection.is_connected():
+                connection.close()
