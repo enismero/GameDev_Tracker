@@ -182,4 +182,28 @@ def update_task_status(task_id:int,task:TaskStatusUpdate):
             cursor.close()
         if connection is not None and connection.is_connected():
             connection.close()
-            
+
+#kullanıcı listeleme-------------------------
+@app.get("/users")
+def get_users():
+    connection=None
+    cursor=None
+
+    try:
+        connection=get_connection()
+        cursor=connection.cursor(dictionary=True)
+
+        cursor.execute("""
+        select user_id,display_name 
+        from users 
+        order by display_name,user_id
+        """)
+        return cursor.fetchall()
+    except mysql.connector.Error as e:
+        logger.exception("kullanıcıları alırken hata oldu")
+        raise HTTPException(status_code=500,detail="kullanıcılar alınamadı") from e
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if connection is not None:
+            connection.close()

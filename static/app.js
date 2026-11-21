@@ -107,6 +107,48 @@ function createCard(task) {
     return card;
 }
 
+async function loadUsers() {
+    const creatorSelect = document.querySelector("#created-by");
+    const assigneeSelect = document.querySelector("#assigned-to");
+
+    submitButton.disabled = true;
+
+    try {
+        const users = await apiRequest("/users");
+
+        // İlk açıklama seçeneklerini koru, eski kullanıcıları kaldır.
+        creatorSelect.length = 1;
+        assigneeSelect.length = 1;
+
+        for (const user of users) {
+            const label = `${user.display_name} (#${user.user_id})`;
+
+            const creatorOption = document.createElement("option");
+            creatorOption.value = user.user_id;
+            creatorOption.textContent = label;
+            creatorSelect.appendChild(creatorOption);
+
+            const assigneeOption = document.createElement("option");
+            assigneeOption.value = user.user_id;
+            assigneeOption.textContent = label;
+            assigneeSelect.appendChild(assigneeOption);
+        }
+
+        if (users.length === 0) {
+            showMessage(
+                "Henüz kullanıcı yok. Görev eklemek için önce kullanıcı oluşturmalısın.",
+                true
+            );
+            return;
+        }
+
+        submitButton.disabled = false;
+
+    } catch (error) {
+        showMessage(`Kullanıcılar yüklenemedi: ${error.message}`, true);
+    }
+}
+
 async function loadTasks() {
     refreshButton.disabled = true;
 
@@ -182,5 +224,5 @@ refreshButton.addEventListener("click", () => {
     showMessage("");
     loadTasks();
 });
-
+loadUsers()
 loadTasks();

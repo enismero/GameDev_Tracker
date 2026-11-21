@@ -45,19 +45,23 @@
                 </label>
 
                 <label>
-                    Oluşturan kullanıcı ID
-                    <input id="created-by" type="number" min="1" step="1" required>
+                    Oluşturan kullanıcı
+                    <select id="created-by" required>
+                        <option value="">Kullanıcı seç</option>
+                    </select>
                 </label>
 
                 <label>
                     Sorumlu kullanıcı ID
-                    <input id="assigned-to" type="number" min="1" step="1">
+                    <select id="assigned-to">
+                        <option value="">Atanmamış</option>
+                    </select>
                 </label>
             </div>
 
             <p class="hint">
-                local test version:ID elle girilmeli
-                sorumlu alanı boş kalabilir
+                Görevi oluşturan kişiyi seç.
+                Sorumlu kişiyi daha sonra atayabilirsin.
             </p>
 
             <button id="submit-button" type="submit">Görev ekle</button>
