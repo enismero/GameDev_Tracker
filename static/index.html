@@ -2,10 +2,12 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=dvice-width, inital-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GameDev Tracker</title>
+
     <link rel="stylesheet" href="/static/style.css"> 
     <script src="/static/app.js" defer></script>
+
 </head>
 <body>
     <header>
@@ -21,7 +23,7 @@
     <section class="panel">
         <h2>Yeni görev</h2>
 
-        <from id="task-form">
+        <form id="task-form">
             <label>
                 Başlık
                 <input id="title" maxlength="150" required>
@@ -38,7 +40,7 @@
                     <select id="priority">
                         <option value="low">Düşük</option>
                         <option value="medium">Orta</option>
-                        <option valur="high">Yüksek</option>
+                        <option value="high">Yüksek</option>
                     </select>
                 </label>
 
@@ -59,7 +61,7 @@
             </p>
 
             <button id="submit-button" type="submit">Görev ekle</button>
-        </from>
+        </form>
     </section>
 
     <main id="board" class="board" aria-label="Görev panosu"></main>

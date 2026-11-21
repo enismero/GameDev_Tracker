@@ -5,8 +5,8 @@
 body {
     margin: 0;
     padding: 32px;
-    background: #10131c;
-    color: #edf0fa;
+    background: #181125;
+    color: #18caee;
     font-family: Arial, sans-serif;
 }
 
@@ -23,13 +23,11 @@ h1, h2, h3 {
 }
 
 header p, .hint, .meta, .empty {
-    color: #adb6cc;
+    color: #18caee;
 }
 
 .panel, .column {
-    background: #1a2030;
-    border: 1px solid #303950;
-    border-radius: 14px;
+    background: #7100a1;
     padding: 20px;
 }
 
@@ -54,15 +52,14 @@ form {
 
 input, textarea, select, button {
     font: inherit;
-    border-radius: 8px;
     padding: 11px;
 }
 
 input, textarea, select {
     width: 100%;
     min-width: 0;
-    color: #edf0fa;
-    background: #111725;
+    color: #18caee;
+    background: #181125;
     border: 1px solid #46516b;
 }
 
@@ -72,13 +69,13 @@ textarea {
 
 button {
     border: none;
-    color: white;
-    background: #6655d9;
+    color: #18caee;
+    background: #a255d9;
     cursor: pointer;
 }
 
 button:hover {
-    background: #7867ed;
+    background: #e667ed;
 }
 
 button:disabled, select:disabled {
@@ -103,7 +100,7 @@ button:disabled, select:disabled {
 }
 
 .card {
-    background: #252e42;
+    background: #181125;
     border-radius: 10px;
     padding: 16px;
     margin-top: 14px;

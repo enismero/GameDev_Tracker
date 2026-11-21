@@ -1,4 +1,5 @@
 //api ile haberleşme
+console.log("app.js çalışıyor");
 
 const statuses={
     todo: "yapılacak",

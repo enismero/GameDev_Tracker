@@ -5,7 +5,22 @@ from database import get_connection
 from typing import Literal
 from pydantic import BaseModel, Field
 
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 app=FastAPI(title="GameDev Tracker")
+
+BASE_DIR=Path(__file__).resolve().parent #main.py dosyasının bulunduğu klasörü büldü
+#.parent dosya adını çıkartıp path verir C:\Development\All Project\GameDev_Tracker
+
+app.mount(
+    "/static", #taracıcıdaki url başlangıcı
+    StaticFiles(directory=BASE_DIR/"static"),
+    name="static" #isteklerin karşılanacağı klasör
+    #C:\Development\All Project\GameDev_Tracker\static\index.html
+)
+
 logger=logging.getLogger(__name__)
 
 #yeni oluşturmak için
@@ -22,7 +37,11 @@ class TaskStatusUpdate(BaseModel):
 
 @app.get("/")
 def home():
-    return{"message":"GameDev TRacker api çalışıyo."}
+    return FileResponse(BASE_DIR/"static"/"index.html")
+
+#“Yanıt olarak belirtilen dosyanın içeriğini gönder.”
+#Tarayıcı HTML dosyasını alınca içindeki başlıkları, formu ve düğmeleri ekrana çizer.
+
 #/tasks adresine gelen GET isteğini karşılar. --------------------
 @app.get("/tasks") 
 def get_tasks():
