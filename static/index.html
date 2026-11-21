@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=dvice-width, inital-scale=1.0">
+    <title>GameDev Tracker</title>
+    <link rel="stylesheet" href="/static/style.css"> 
+    <script src="/static/app.js" defer></script>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>GameDev Tracker</h1>
+            <p>ekibinin görevlerini tek yerde takip et.</p>
+        </div>
+        <button id="refresh-button" type="button">Yenile</button>
+    </header>
+
+    <p id="message" role="status" aria-live="polite"></p>
+
+    <section class="panel">
+        <h2>Yeni görev</h2>
+
+        <from id="task-form">
+            <label>
+                Başlık
+                <input id="title" maxlength="150" required>
+            </label>
+
+            <label>
+                Açıklama
+                <textarea id="description" rows="3"></textarea>
+            </label>
+
+            <div class="form-row">
+                <label>
+                    Öncelik
+                    <select id="priority">
+                        <option value="low">Düşük</option>
+                        <option value="medium">Orta</option>
+                        <option valur="high">Yüksek</option>
+                    </select>
+                </label>
+
+                <label>
+                    Oluşturan kullanıcı ID
+                    <input id="created-by" type="number" min="1" step="1" required>
+                </label>
+
+                <label>
+                    Sorumlu kullanıcı ID
+                    <input id="assigned-to" type="number" min="1" step="1">
+                </label>
+            </div>
+
+            <p class="hint">
+                local test version:ID elle girilmeli
+                sorumlu alanı boş kalabilir
+            </p>
+
+            <button id="submit-button" type="submit">Görev ekle</button>
+        </from>
+    </section>
+
+    <main id="board" class="board" aria-label="Görev panosu"></main>
+</body>
+</html>
