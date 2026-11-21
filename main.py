@@ -3,11 +3,13 @@ import mysql.connector
 from fastapi import FastAPI,HTTPException
 from database import get_connection
 from typing import Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+
+from auth import hash_password
 
 app=FastAPI(title="GameDev Tracker")
 
@@ -34,6 +36,21 @@ class TaskCreate(BaseModel):
 #task aşaçasını güncellemek için
 class TaskStatusUpdate(BaseModel):
     status:Literal["todo","in_progress","testing","done"]
+
+class UserCreate(BaseModel):
+    username:str=Field(
+        min_length=3,
+        max_length=50,
+        pattern=r"^[a-zA-Z0-9_]+$"
+    )
+    display_name:str=Field(
+        min_length=3,
+        max_length=100
+    )
+    password:SecretStr=Field(
+        min_length=8,
+        max_length=128
+    )
 
 @app.get("/")
 def home():
@@ -206,4 +223,48 @@ def get_users():
         if cursor is not None:
             cursor.close()
         if connection is not None:
+            connection.close()
+
+#user kayıt--------------------------------
+@app.post("/auth/register",status_code=201)
+def register_user(user:UserCreate):
+    username=user.username.lower()
+    display_name=user.display_name.strip()
+
+    if not display_name:
+        raise HTTPException(status_code=422,detail="display name boş olamaz")
+    password_hash=hash_password(user.password.get_secret_value())
+
+    connection=None
+    cursor=None
+
+    try:
+        connection = get_connection()
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            insert into users(username,display_name,password_hash)
+            values(%s,%s,%s)""",(username,display_name,password_hash))
+
+        user_id = cursor.lastrowid
+        connection.commit()
+
+        return {
+            "message": "Kullanıcı oluşturuldu.",
+            "user_id": user_id,
+            "display_name": display_name
+        }
+    except mysql.connector.Error as e:
+        if connection is not None:
+            connection.rollback()
+        if e.errno==1062: #benzersizlik kuralı ihlali hatası
+            raise HTTPException(status_code=409,detail="bu kullanıcı adı zaten mevcut") from e
+        logger.exception("kullanıcı oluştururken hata oluştu")
+
+        raise HTTPException(status_code=500,detail="kullanıcı oluşturulamadı") from e
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+        if connection is not None and connection.is_connected():
             connection.close()
